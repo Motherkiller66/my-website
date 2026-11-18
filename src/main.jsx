@@ -51,6 +51,8 @@ const islandLyrics = [
 
 function AwardAudioPlayer() {
   const audioRef = useRef(null)
+  const audioLoadedRef = useRef(false)
+  const pendingSeekRef = useRef(null)
   const audioScrubbingRef = useRef(false)
   const lyricsRef = useRef(null)
   const lyricLineRefs = useRef([])
@@ -69,8 +71,18 @@ function AwardAudioPlayer() {
       behavior: 'smooth',
     })
   }, [activeLyric])
-  const toggleAudio = async () => {
+  const loadAudio = () => {
     const audio = audioRef.current
+    if (!audio) return null
+    if (!audioLoadedRef.current) {
+      audioLoadedRef.current = true
+      audio.src = audio.dataset.src
+      audio.load()
+    }
+    return audio
+  }
+  const toggleAudio = async () => {
+    const audio = loadAudio()
     if (!audio) return
     if (audio.paused) {
       try { await audio.play() } catch (error) { console.warn('音频播放失败', error) }
@@ -79,12 +91,15 @@ function AwardAudioPlayer() {
     }
   }
   const seekAudioTo = rawTime => {
-    const audio = audioRef.current
+    const audio = loadAudio()
     if (!audio) return
     const availableDuration = Number.isFinite(audio.duration) && audio.duration > 0
       ? audio.duration
       : duration
-    if (!availableDuration) return
+    if (!availableDuration) {
+      pendingSeekRef.current = Number(rawTime)
+      return
+    }
     const requestedTime = Number(rawTime)
     if (!Number.isFinite(requestedTime)) return
     const time = Math.min(availableDuration, Math.max(0, requestedTime))
@@ -146,9 +161,18 @@ function AwardAudioPlayer() {
     <div className="audio-player" aria-label="《岛25.2》音频播放器">
       <audio
         ref={audioRef}
-        src="/island-25-2.mp3"
-        preload="metadata"
-        onLoadedMetadata={event => setDuration(event.currentTarget.duration)}
+        data-src="/island-25-2.mp3"
+        preload="none"
+        onLoadedMetadata={event => {
+          const nextDuration = event.currentTarget.duration
+          setDuration(nextDuration)
+          if (pendingSeekRef.current !== null && Number.isFinite(nextDuration)) {
+            const time = Math.min(nextDuration, Math.max(0, pendingSeekRef.current))
+            event.currentTarget.currentTime = time
+            setCurrentTime(time)
+            pendingSeekRef.current = null
+          }
+        }}
         onTimeUpdate={event => {
           if (!audioScrubbingRef.current) setCurrentTime(event.currentTarget.currentTime)
         }}
@@ -195,6 +219,7 @@ function AwardAudioPlayer() {
 
 function ProjectVideo() {
   const videoRef = useRef(null)
+  const videoLoadedRef = useRef(false)
   const controlsTimerRef = useRef(null)
   const scrubbingRef = useRef(false)
   const [playing, setPlaying] = useState(false)
@@ -216,8 +241,18 @@ function ProjectVideo() {
     controlsTimerRef.current = window.setTimeout(() => setControlsVisible(false), 2500)
     return () => window.clearTimeout(controlsTimerRef.current)
   }, [])
-  const toggleVideo = async () => {
+  const loadVideo = () => {
     const video = videoRef.current
+    if (!video) return null
+    if (!videoLoadedRef.current) {
+      videoLoadedRef.current = true
+      video.src = video.dataset.src
+      video.load()
+    }
+    return video
+  }
+  const toggleVideo = async () => {
+    const video = loadVideo()
     if (!video) return
     if (video.paused) {
       try { await video.play() } catch (error) { console.warn('视频播放失败', error) }
@@ -302,8 +337,8 @@ function ProjectVideo() {
   >
     <video
       ref={videoRef}
-      src="/lanzhou-ai-video-web.mp4"
-      preload="metadata"
+      data-src="/lanzhou-ai-video-web.mp4"
+      preload="none"
       playsInline
       onClick={toggleVideo}
       onLoadedMetadata={syncVideoDuration}
@@ -345,14 +380,14 @@ function ProjectVideo() {
 }
 
 const ipGalleryItems = [
-  { no: '01', title: '黄小河·角色正面', subtitle: 'CHARACTER FRONT', src: '/ip-huangxiaohe-front-v4.png', alt: '黄小河 IP 角色正面设计' },
-  { no: '02', title: '黄小河·角色侧面', subtitle: 'CHARACTER SIDE', src: '/ip-huangxiaohe-side-v4.png', alt: '黄小河 IP 角色侧面设计' },
-  { no: '03', title: '黄小河·角色背面', subtitle: 'CHARACTER BACK', src: '/ip-huangxiaohe-back-v4.png', alt: '黄小河 IP 角色背面设计' },
-  { no: '04', title: '可口可乐 IP 角色', subtitle: 'COCA-COLA IP', src: '/ip-brand-character.png', alt: '可口可乐 IP 角色设计' },
-  { no: '05', title: '可口可乐手机壳', subtitle: 'PHONE CASE', src: '/ip-phone-case.png', alt: '可口可乐 IP 手机壳衍生产品设计' },
-  { no: '06', title: '可口可乐帆布包', subtitle: 'TOTE BAG', src: '/ip-tote-bag.png', alt: '可口可乐 IP 帆布包衍生产品设计' },
-  { no: '07', title: '刘家峡文创徽章', subtitle: 'CULTURAL PRODUCT', src: '/ip-liujiaxia-badge-v4.png', alt: '刘家峡文创徽章设计' },
-  { no: '08', title: '刘家峡品牌视觉', subtitle: 'BRAND IDENTITY', src: '/ip-liujiaxia-identity-v2.png', alt: '刘家峡品牌标志与视觉应用设计' },
+  { no: '01', title: '黄小河·角色正面', subtitle: 'CHARACTER FRONT', src: '/ip-huangxiaohe-front-v4.webp', alt: '黄小河 IP 角色正面设计' },
+  { no: '02', title: '黄小河·角色侧面', subtitle: 'CHARACTER SIDE', src: '/ip-huangxiaohe-side-v4.webp', alt: '黄小河 IP 角色侧面设计' },
+  { no: '03', title: '黄小河·角色背面', subtitle: 'CHARACTER BACK', src: '/ip-huangxiaohe-back-v4.webp', alt: '黄小河 IP 角色背面设计' },
+  { no: '04', title: '可口可乐 IP 角色', subtitle: 'COCA-COLA IP', src: '/ip-brand-character.webp', alt: '可口可乐 IP 角色设计' },
+  { no: '05', title: '可口可乐手机壳', subtitle: 'PHONE CASE', src: '/ip-phone-case.webp', alt: '可口可乐 IP 手机壳衍生产品设计' },
+  { no: '06', title: '可口可乐帆布包', subtitle: 'TOTE BAG', src: '/ip-tote-bag.webp', alt: '可口可乐 IP 帆布包衍生产品设计' },
+  { no: '07', title: '刘家峡文创徽章', subtitle: 'CULTURAL PRODUCT', src: '/ip-liujiaxia-badge-v4.webp', alt: '刘家峡文创徽章设计' },
+  { no: '08', title: '刘家峡品牌视觉', subtitle: 'BRAND IDENTITY', src: '/ip-liujiaxia-identity-v2.webp', alt: '刘家峡品牌标志与视觉应用设计' },
 ]
 
 function IpGallery() {
@@ -450,9 +485,9 @@ function ProjectCase({ project }) {
       {project.video
         ? <ProjectVideo/>
         : project.audio
-          ? <div className="case-media case-cover"><img src="/island-25-2-cover.png" alt="《岛25.2》主题曲封面" /></div>
+          ? <div className="case-media case-cover"><img src="/island-25-2-cover.webp" alt="《岛25.2》主题曲封面" /></div>
           : project.poster
-            ? <div className="case-media case-poster"><img src="/haoshi-bread-poster.jpg" alt="豪士面包大广赛宣传海报" /></div>
+            ? <div className="case-media case-poster"><img src="/haoshi-bread-poster.webp" alt="豪士面包大广赛宣传海报" /></div>
           : <div className={`project-placeholder case-media p${project.no}`}><span>{project.media}</span><small>{project.action}</small></div>}
       <div className="case-copy">
         <h3>{project.title}</h3>
@@ -483,10 +518,19 @@ function App() {
     const video = heroVideo.current
     if (!video) return undefined
     video.muted = true
-    const startHeroVideo = () => video.play().catch(() => {})
-    if (video.readyState >= 2) startHeroVideo()
-    else video.addEventListener('canplay', startHeroVideo, { once: true })
-    return () => video.removeEventListener('canplay', startHeroVideo)
+    const startHeroVideo = () => {
+      if (video.dataset.loaded === 'true') return
+      video.dataset.loaded = 'true'
+      video.src = video.dataset.src
+      video.load()
+      video.play().catch(() => {})
+    }
+    window.addEventListener('portfolio-intro-complete', startHeroVideo)
+    const fallback = window.setTimeout(startHeroVideo, 5500)
+    return () => {
+      window.removeEventListener('portfolio-intro-complete', startHeroVideo)
+      window.clearTimeout(fallback)
+    }
   }, [])
   const copyWechat = async () => {
     await navigator.clipboard.writeText('_nocilantro_0')
@@ -536,13 +580,13 @@ function App() {
         <video
           ref={heroVideo}
           className="hero-video"
-          src="/hero-video-web.mp4?v=20s-20260718"
+          data-src="/hero-video-web.mp4?v=20s-20260718"
           poster="/hero-video-poster.jpg?v=20s-20260718"
           autoPlay
           muted
           loop
           playsInline
-          preload="auto"
+          preload="none"
           aria-label="首页动态背景视频"
         />
         <div className="ambient one"/><div className="ambient two"/>
