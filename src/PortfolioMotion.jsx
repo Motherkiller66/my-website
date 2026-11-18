@@ -1,16 +1,15 @@
 import { useLayoutEffect } from 'react'
+import { gsap } from 'gsap'
+import { ScrollTrigger } from 'gsap/ScrollTrigger'
 
 export default function PortfolioMotion() {
   useLayoutEffect(() => {
     let context
-    let cancelled = false
     let introFinished = false
-    let introTimeout
 
     const finishIntro = () => {
       if (introFinished) return
       introFinished = true
-      if (introTimeout) window.clearTimeout(introTimeout)
       document.body.style.overflow = ''
       document.body.classList.remove('portfolio-motion-active')
       const opening = document.querySelector('.opening-sequence')
@@ -18,20 +17,12 @@ export default function PortfolioMotion() {
       window.dispatchEvent(new Event('portfolio-intro-complete'))
     }
 
-    const setupMotion = async () => {
-      // Never let a slow first visit or a failed animation chunk trap the page
-      // behind the opening panels forever.
-      introTimeout = window.setTimeout(finishIntro, 4500)
+    const setupMotion = () => {
+      gsap.registerPlugin(ScrollTrigger)
+      document.body.classList.add('portfolio-motion-active')
+      document.body.style.overflow = 'hidden'
 
-      try {
-        const [{ gsap }, { ScrollTrigger }] = await Promise.all([import('gsap'), import('gsap/ScrollTrigger')])
-        if (cancelled || introFinished) return
-        gsap.registerPlugin(ScrollTrigger)
-
-        document.body.classList.add('portfolio-motion-active')
-        document.body.style.overflow = 'hidden'
-
-        context = gsap.context(() => {
+      context = gsap.context(() => {
         const intro = gsap.timeline({
           defaults: { ease: 'power4.out' },
           onComplete: () => {
@@ -86,22 +77,16 @@ export default function PortfolioMotion() {
         gsap.fromTo(media, { yPercent: -4, scale: 1.045 }, { yPercent: 4, scale: 1.045, ease: 'none', scrollTrigger: { trigger: media, start: 'top bottom', end: 'bottom top', scrub: .9 } })
       })
 
-        const contactTimeline = gsap.timeline({ scrollTrigger: { trigger: '.contact-layout', start: 'top 79%', once: true } })
-        contactTimeline
-          .fromTo('.contact-label, .contact-copy > p, .contact-status, .resume-button', { y: 48, opacity: 0 }, { y: 0, opacity: 1, duration: 1, stagger: .12, ease: 'power3.out' }, .25)
-          .fromTo('.contact-card', { y: 100, opacity: 0, rotateY: -12, scale: .94 }, { y: 0, opacity: 1, rotateY: 0, scale: 1, duration: 1.45, ease: 'expo.out' }, .42)
-        })
-      } catch (error) {
-        console.warn('开屏动画加载失败，已使用静态页面继续显示', error)
-        finishIntro()
-      }
+      const contactTimeline = gsap.timeline({ scrollTrigger: { trigger: '.contact-layout', start: 'top 79%', once: true } })
+      contactTimeline
+        .fromTo('.contact-label, .contact-copy > p, .contact-status, .resume-button', { y: 48, opacity: 0 }, { y: 0, opacity: 1, duration: 1, stagger: .12, ease: 'power3.out' }, .25)
+        .fromTo('.contact-card', { y: 100, opacity: 0, rotateY: -12, scale: .94 }, { y: 0, opacity: 1, rotateY: 0, scale: 1, duration: 1.45, ease: 'expo.out' }, .42)
+      })
     }
 
     setupMotion()
 
     return () => {
-      cancelled = true
-      if (introTimeout) window.clearTimeout(introTimeout)
       context?.revert()
       document.body.classList.remove('portfolio-motion-active')
       document.body.style.overflow = ''
